@@ -1,8 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-BOX_IMAGE = "ubuntu/bionic64"
 MASTER_IP = "192.168.33.10"
+BOX_IMAGE = "ubuntu/focal64"
 
 Vagrant.configure("2") do |config|
 
@@ -15,7 +15,8 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/titb",
     owner: "vagrant",
     group: "www-data",
-    mount_options: ["dmode=777,fmode=777"]
+    mount_options: ["dmode=777,fmode=777"],
+    SharedFoldersEnableSymlinksCreate: false
 
   config.vm.provision "ansible" do |ansible|
     ansible.config_file = "ansible.cfg"
@@ -40,16 +41,16 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "master-vm" do |master|
     master.vm.box = BOX_IMAGE
-    master.disksize.size = '30GB'
+    master.disksize.size = '45GB'
     master.vm.hostname = "master-vm"
     master.vm.network "private_network", ip: MASTER_IP
   end
 
   config.vm.define "worker-vm" do |subconfig|
     subconfig.vm.box = BOX_IMAGE
-    subconfig.disksize.size = '30GB'
+    subconfig.disksize.size = '45GB'
     subconfig.vm.hostname = "worker-vm"
-    subconfig.vm.network "private_network", ip: "192.168.33.11"
+    subconfig.vm.network "private_network", ip: "192.168.56.11"
   end
 
   config.vm.provider "virtualbox" do |v|

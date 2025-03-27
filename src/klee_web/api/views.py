@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from djangorestframework_camel_case.parser import CamelCaseJSONParser
 from rest_framework.response import Response
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 
 from api.helpers import get_client_ip
 from api.permissions import IsOwnerOrReadOnly
@@ -70,7 +70,7 @@ class FileViewSet(viewsets.ViewSet):
         instance.delete()
         return Response("")
 
-    @list_route(methods=['POST'])
+    @action(methods=['POST'], detail=False)
     def upload(self, request, project_pk=None):
         project = get_object_or_404(Project, pk=project_pk, owner=request.user)
         f = request.FILES['file']
@@ -84,7 +84,7 @@ class FileViewSet(viewsets.ViewSet):
 
 
 class JobViewSet(viewsets.ViewSet):
-    @list_route(methods=['POST'])
+    @action(methods=['POST'], detail=False)
     def submit(self, request):
         worker_config = WorkerConfig()
         user = 'Guest'

@@ -1,49 +1,54 @@
 import os
-
 import redis
-
 from klee_web.worker.worker import celery
 
 
-# Returns tasks registered to workers.
 def registered_tasks(workers=None):
+    """Returns tasks registered to workers."""
     i = celery.control.inspect(workers)
-    return i.registered()
+    return i.registered() if i and i.registered() else {}
 
 
-# Returns currently executing tasks.
 def active_tasks(workers=None):
+    """Returns currently executing tasks."""
     i = celery.control.inspect(workers)
-    return i.active()
+    return i.active() if i and i.active() else {}
 
 
 def scheduled_tasks(workers=None):
+    """Returns scheduled tasks."""
     i = celery.control.inspect(workers)
-    return i.scheduled()
+    return i.scheduled() if i and i.scheduled() else {}
 
 
-# Returns tasks taken off the queue by a worker, waiting to be executed.
 def reserved_tasks(workers=None):
+    """Returns tasks taken off the queue by a worker, waiting to be executed."""
     i = celery.control.inspect(workers)
-    return i.reserved()
+    return i.reserved() if i and i.reserved() else {}
 
 
 def active_queues(workers=None):
+    """Returns active queues per worker."""
     i = celery.control.inspect(workers)
-    return i.active_queues()
+    return i.active_queues() if i and i.active_queues() else {}
 
 
 def get_workers():
+    """Returns a list of active Celery workers."""
     i = celery.control.inspect()
-    return i.registered().keys()
+    return list(i.registered().keys()) if i and i.registered() else []
 
 
-# Returns tasks in redis queue, not given to a worker.
 def redis_queue():
-    r = redis.StrictRedis(host=os.environ['REDIS_HOST'],
-                          port=os.environ['REDIS_PORT'])
-    return r.lrange('celery', 0, -1)
+    """Returns tasks in the Redis queue that haven't been assigned to a worker."""
+    r = redis.StrictRedis(
+        host=os.environ.get('REDIS_HOST', 'localhost'),
+        port=int(os.environ.get('REDIS_PORT', 6379)),
+        decode_responses=True  # Ensures JSON handling is smoother
+    )
+    return r.lrange('celery', 0, -1)  # Get all pending tasks
 
 
 def kill_task(task_id):
+    """Forcefully kills a Celery task."""
     celery.control.revoke(task_id, terminate=True, signal='SIGKILL')

@@ -17,7 +17,7 @@ class SubmitJobForm(forms.Form):
     size_sym_in = forms.IntegerField(required=False, min_value=0)
 
     def clean(self):
-        cleaned_data = super(SubmitJobForm, self).clean()
+        cleaned_data = super().clean()
         if not cleaned_data.get("code") and not cleaned_data.get("file"):
             raise forms.ValidationError("You must provide either"
                                         " a code sample "
@@ -56,7 +56,7 @@ class UserCreationForm(forms.ModelForm):
     def clean_username(self):
         # Since User.username is unique, this check is redundant,
         # but it sets a nicer error message than the ORM. See #13147.
-        username = self.cleaned_data["username"]
+        username = self.cleaned_data.get(["username"])
         try:
             User._default_manager.get(username=username)
         except User.DoesNotExist:
@@ -77,8 +77,8 @@ class UserCreationForm(forms.ModelForm):
         return password2
 
     def save(self, commit=True):
-        user = super(UserCreationForm, self).save(commit=False)
-        user.set_password(self.cleaned_data["password1"])
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data.get(["password1"]))
         if commit:
             user.save()
         return user

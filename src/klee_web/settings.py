@@ -56,7 +56,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                "frontend.context_processors.global_vars"
+                "frontend.context_processors.global_vars",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect"
             ],
         }
     }
@@ -72,9 +74,9 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bootstrapform',
     'rest_framework',
     'rest_framework_nested',
+    'rest_framework_social_oauth2',
     'oauth2_provider',
     'social_django',
 )
@@ -95,6 +97,8 @@ WSGI_APPLICATION = 'wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DATABASES = {
     'default': {
@@ -124,8 +128,6 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.github.GithubOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
-
-GEOIP_PATH = 'geoip'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.7/howto/static-files/

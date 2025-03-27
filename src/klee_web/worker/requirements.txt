@@ -1,7 +1,7 @@
-celery==4.3.*
-boto==2.49.*
-requests==2.22.*
-redis==3.2.*
-fakeredis==1.0.*
+celery==5.4.*
+boto3==1.37.*
+requests==2.32.*
+redis==5.2.*
+fakeredis==2.27.*
 gcovparse==0.0.*
 flake8

@@ -1,20 +1,29 @@
-FROM python:3.8-buster
+FROM python:3.13-slim-bookworm
 
 # Install Node.js, Ruby and other frontend tools
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
-RUN apt-get install -y ruby-full nodejs
-RUN npm install -g bower grunt-cli
-RUN gem install sass
+RUN apt-get update && apt-get install -y \
+    sudo
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+RUN apt-get install -y \
+    libpq-dev \
+    nodejs \
+    npm \
+    postgresql-client \
+    ruby-full
+RUN npm install -g bower grunt-cli && \
+    gem install sass
 
 COPY ./requirements.txt /
-RUN pip install -r /requirements.txt
-RUN rm /requirements.txt
+RUN pip install -r /requirements.txt && \
+    rm /requirements.txt
 
 WORKDIR /kleeweb
 COPY . /kleeweb
 
 RUN DEVELOPMENT=1 ./build.sh
 RUN ln -s /kleeweb/frontend/static /static
+
+RUN rm -rf /var/lib/apt/lists/*
 
 # For nginx static content
 # TODO: Is there a way to avoid the symlink?
@@ -23,4 +32,4 @@ VOLUME /static/
 # TODO: The following doesn't work, we have to manually export the socket
 # VOLUME /tmp
 
-CMD ./run.sh
+CMD ["./run.sh"]

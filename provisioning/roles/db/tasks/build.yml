@@ -2,5 +2,5 @@
 - name: Docker pull Postgres
   docker_image:
     name: postgres
-    tag: "12"
+    tag: "17-alpine"
     source: pull

@@ -1,22 +1,20 @@
 import os
-import subprocess
 import re
-
+import subprocess
 from celery import Celery
-from celery.worker.control import Panel
 from celery.exceptions import SoftTimeLimitExceeded
-
-from worker.runner import WorkerRunner
 from worker.worker_config import WorkerConfig
+from worker.runner import WorkerRunner
 
-
+# Initialize Celery app
 celery = Celery(broker=os.environ['CELERY_BROKER_URL'], backend='rpc')
 
 worker_config = WorkerConfig()
 
 
-@Panel.register
-def get_uptime_stats(state):
+# Define a custom Celery task for uptime stats
+@celery.task(name='get_uptime_stats')
+def get_uptime_stats():
     uptime_pattern = re.compile(
         r'up\s+(.*?),\s+([0-9]+) '
         r'users?,\s+load averages?: '
@@ -35,9 +33,9 @@ def get_uptime_stats(state):
     }
 
 
+# Your submit_code task remains unchanged
 @celery.task(name='submit_code', bind=True)
 def submit_code(self, code, email, klee_args, endpoint):
-    # name will hold the name of the current worker
     name = self.request.hostname
     with WorkerRunner(self.request.id, endpoint, worker_name=name) as runner:
         try:
@@ -45,8 +43,7 @@ def submit_code(self, code, email, klee_args, endpoint):
         except SoftTimeLimitExceeded:
             result = {
                 'klee_run': {
-                    'output': 'Job exceeded time limit of '
-                              '{} seconds'.format(worker_config.timeout)
+                    'output': f'Job exceeded time limit of {worker_config.timeout} seconds'
                 }
             }
             runner.send_notification('job_failed', result)

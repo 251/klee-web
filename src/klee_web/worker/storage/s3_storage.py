@@ -1,7 +1,5 @@
+import boto3
 import os
-
-from boto.s3.key import Key
-from boto.s3.connection import S3Connection
 
 
 class S3Storage():
@@ -11,17 +9,28 @@ class S3Storage():
         s3_access_key = access_key or os.environ['AWS_ACCESS_KEY']
         s3_secret_key = secret_key or os.environ['AWS_SECRET_KEY']
 
-        self.conn = S3Connection(s3_access_key, s3_secret_key)
-        # Make sure our S3 bucket exists.
-        # Buckets are like domain names. Must be unique accross S3!
-        self.conn.create_bucket(S3Storage.BUCKET)
+        self.s3 = boto3.client('s3', aws_access_key_id=s3_access_key,
+                               aws_secret_access_key=s3_secret_key)
+        self.ensure_bucket_exists()
+
+    def ensure_bucket_exists(self):
+        """Create the bucket if it doesn't already exist."""
+        existing_buckets = [
+            bucket['Name'] for bucket in self.s3.list_buckets()['Buckets']
+        ]
+        if S3Storage.BUCKET not in existing_buckets:
+            self.s3.create_bucket(Bucket=S3Storage.BUCKET)
 
     def store_file(self, file_path):
-        bucket = self.conn.get_bucket(S3Storage.BUCKET)
+        """Upload a file to S3 and return its public URL."""
+        file_name = os.path.basename(file_path)
 
-        k = Key(bucket)
-        k.key = os.path.basename(file_path)
-        k.set_contents_from_filename(file_path)
-        k.set_acl('public-read')
+        self.s3.upload_file(
+            file_path,  # Local file path
+            S3Storage.BUCKET,  # S3 bucket name
+            file_name,  # S3 key (file name)
+            ExtraArgs={'ACL': 'public-read'}  # Make the file public
+        )
 
-        return k.generate_url(expires_in=0, query_auth=False)
+        # Generate and return a public URL
+        return f"https://{S3Storage.BUCKET}.s3.amazonaws.com/{file_name}"

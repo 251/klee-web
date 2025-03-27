@@ -35,7 +35,7 @@ class Project(models.Model):
                                      blank=True,
                                      related_name="default_project")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -61,5 +61,5 @@ class File(models.Model):
 
     last_modified = models.DateTimeField(auto_now=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name

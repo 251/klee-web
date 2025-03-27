@@ -5,7 +5,7 @@ from .views import ProjectViewSet, FileViewSet, JobViewSet
 router = DefaultRouter()
 
 router.register(r'projects', ProjectViewSet)
-router.register(r'jobs', JobViewSet, base_name='jobs')
+router.register(r'jobs', JobViewSet, basename='jobs')
 
 file_router = routers.NestedSimpleRouter(router,
                                          r'projects', lookup='project')

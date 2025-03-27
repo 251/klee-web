@@ -1,9 +1,8 @@
 import datetime
-import json
 
 from django.contrib import messages
 from django.urls import reverse
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 
 from .decorators import group_required
@@ -12,7 +11,6 @@ from worker.worker import celery
 from worker.worker_config import WorkerConfig
 from . import usage_stats
 from . import klee_tasks
-
 
 HUMAN_READABLE_FIELD_NAMES = {
     "timeout": "Timeout",
@@ -37,13 +35,7 @@ def index(request):
 @group_required("admin")
 def get_job_history(request):
     days, job_count = usage_stats.last_seven_days()
-    attrs = {
-        'days': days,
-        'count': job_count,
-    }
-
-    return HttpResponse(json.dumps(attrs),
-                        content_type='application/json; charset=utf8')
+    return JsonResponse({"days": days, "count": job_count})
 
 
 @group_required("admin")
@@ -55,7 +47,7 @@ def worker_config(request):
 
             for conf in form.cleaned_data:
                 data = form.cleaned_data[conf]
-                if data or data == 0:
+                if data is not None:
                     worker_configuration.set_config(conf, data)
                     updated.append(HUMAN_READABLE_FIELD_NAMES[conf])
 
@@ -64,18 +56,22 @@ def worker_config(request):
 
             return HttpResponseRedirect(reverse('control_panel:worker_config'))
     else:
-        timeout = worker_configuration.timeout
-        cpu_share = worker_configuration.cpu_share
-        memory_limit = worker_configuration.memory_limit
         form = AdminConfigForm(
-            initial={'cpu_share': cpu_share, 'memory_limit': memory_limit,
-                     'timeout': timeout})
+            initial={
+                'cpu_share': worker_configuration.cpu_share,
+                'memory_limit': worker_configuration.memory_limit,
+                'timeout': worker_configuration.timeout
+            }
+        )
     return render(request, "control_panel/worker_config.html", {'form': form})
 
 
 @group_required("admin")
 def worker_list(request):
-    uptime_stats = celery.control.broadcast('get_uptime_stats', reply=True)
+    """Retrieve worker uptime stats using Celery 5.4"""
+    inspector = celery.control.inspect()
+    uptime_stats = inspector.get_uptime_stats() or {}  # Handle case where no workers reply
+
     return render(
         request,
         "control_panel/worker_list.html",
@@ -89,12 +85,13 @@ def worker_list(request):
 def kill_task(request):
     klee_tasks.kill_task(request.POST['task_id'])
     return HttpResponseRedirect(
-        reverse('control_panel:task_list', args=(request.POST['type'],)))
+        reverse('control_panel:task_list', args=[request.POST['type']])
+    )
 
 
 @group_required("admin")
-def task_list(request, type='active'):
-
+def task_list(request, type):
+    """Get tasks based on their type"""
     task_map = {
         'active': klee_tasks.active_tasks,
         'waiting': klee_tasks.waiting_tasks,
@@ -102,7 +99,7 @@ def task_list(request, type='active'):
     }
 
     attrs = {
-        'tasks': task_map.get(type) or klee_tasks.active_tasks(),
+        'tasks': task_map.get(type, lambda: klee_tasks.active_tasks())(),
         'page': type
     }
     return render(request, "control_panel/task_list.html", attrs)

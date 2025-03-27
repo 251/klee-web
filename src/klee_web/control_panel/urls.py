@@ -1,39 +1,28 @@
-from django.conf.urls import url
+from django.urls import path
 from control_panel import example_manager, views
 
 app_name = 'control_panel'
 
 urlpatterns = [
-    url(r'^$', views.index, name='index'),
-    url(r'^worker/list$', views.worker_list, name='worker_list'),
-    url(r'^worker/config$', views.worker_config, name='worker_config'),
+    path('', views.index, name='index'),
+    path('worker/list/', views.worker_list, name='worker_list'),
+    path('worker/config/', views.worker_config, name='worker_config'),
 
-    url(r'^task/list/(?P<type>\w+)?', views.task_list, name='task_list'),
-    url(r'^task/kill$', views.kill_task, name='kill_task'),
+    path('task/list/', views.task_list, name='task_list'),
+    path('task/list/<str:type>/', views.task_list, name='task_list_filtered'),
+    path('task/kill/', views.kill_task, name='kill_task'),
 
-    url(r'^job/history$', views.get_job_history, name='get_job_history'),
+    path('job/history/', views.get_job_history, name='get_job_history'),
 
-    url(r'^project/$',
-        example_manager.ProjectListView.as_view(),
-        name='example_project_list'),
-    url(r'^project/create$',
-        example_manager.ProjectCreateView.as_view(),
-        name='example_project_create'),
-    url(r'^project/(?P<pk>[0-9]+)/$',
-        example_manager.ProjectUpdateView.as_view(),
-        name='example_project_update'),
-    url(r'^project/delete/(?P<pk>[0-9]+)/$',
-        example_manager.ProjectDeleteView.as_view(),
-        name='example_project_delete'),
+    # Project-related URLs
+    path('project/', example_manager.ProjectListView.as_view(), name='example_project_list'),
+    path('project/create/', example_manager.ProjectCreateView.as_view(), name='example_project_create'),
+    path('project/<int:pk>/', example_manager.ProjectUpdateView.as_view(), name='example_project_update'),
+    path('project/delete/<int:pk>/', example_manager.ProjectDeleteView.as_view(), name='example_project_delete'),
 
-
-    url(r'^project/(?P<project_pk>[0-9]+)/file$',
-        example_manager.FileCreateView.as_view(), name='example_file_create'),
-    url(r'^project/(?P<project_pk>[0-9]+)/file/(?P<pk>[0-9]+)/$',
-        example_manager.FileUpdateView.as_view(), name='example_file_update'),
-    url(r'^project/(?P<project_pk>[0-9]+)/file/(?P<pk>[0-9]+)/default$',
-        example_manager.make_default_file, name='example_file_default'),
-    url(r'^project/(?P<project_pk>[0-9]+)/file/(?P<pk>[0-9]+)/delete/$',
-        example_manager.FileDeleteView.as_view(),
-        name='example_file_delete'),
+    # File-related URLs
+    path('project/<int:project_pk>/file/', example_manager.FileCreateView.as_view(), name='example_file_create'),
+    path('project/<int:project_pk>/file/<int:pk>/', example_manager.FileUpdateView.as_view(), name='example_file_update'),
+    path('project/<int:project_pk>/file/<int:pk>/default/', example_manager.make_default_file, name='example_file_default'),
+    path('project/<int:project_pk>/file/<int:pk>/delete/', example_manager.FileDeleteView.as_view(), name='example_file_delete'),
 ]

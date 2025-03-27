@@ -2,21 +2,17 @@ import datetime
 from django.contrib.auth.decorators import login_required
 from django.forms.utils import ErrorList
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseNotFound
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponse, HttpResponseNotFound, FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.contrib import messages, auth
-from django.views.static import serve
+from django.contrib.auth import update_session_auth_hash
 
 from .forms import SubmitJobForm, UserCreationForm, UserChangePasswordForm
-from django.contrib.gis.geoip2 import GeoIP2
 from .models import Task
 import json
 import os
-
-
-GeoIP = GeoIP2()
 
 
 def index(request):
@@ -30,13 +26,13 @@ def store_data(task, type, data):
     task.save()
 
 
-def jobs_dl(request, file):
+def jobs_dl(request, job_id):
     if request.method == 'GET':
-        fname = file + '.tar.gz'
-        file_path = '/tmp/' + fname
-        return serve(request, fname, os.path.dirname(file_path))
-    else:
-        return HttpResponseNotFound("This page only supports GET")
+        file_path = os.path.join('/tmp/', f"{job_id}.tar.gz")
+        if os.path.exists(file_path):
+            return FileResponse(open(file_path, 'rb'), as_attachment=True)
+        return HttpResponseNotFound("File not found")
+    return HttpResponseNotFound("This page only supports GET")
 
 
 @csrf_exempt
@@ -44,7 +40,7 @@ def jobs_notify(request):
     if request.method == 'POST':
         type = request.POST.get('type')
         channel = request.POST.get('channel')
-        task = Task.objects.get(task_id=channel)
+        task = get_object_or_404(Task, task_id=channel)
         task.worker_name = request.POST.get('worker_name')
         store_data(
             task,
@@ -52,14 +48,7 @@ def jobs_notify(request):
             request.POST.get('data')
         )
         if type == 'job_complete' or type == 'job_failed':
-            try:
-                location = GeoIP.city(task.ip_address)
-                task.location = "{0}, {1}".format(location['city'],
-                                                  location['country_name'])
-            # If the IP is local or we cannot find a match in the database,
-            # Just set the location to something
-            except:
-                task.location = 'Non public IP'
+            task.location = 'Non public IP'
             task.completed_at = datetime.datetime.now()
 
             task.save()
@@ -68,10 +57,10 @@ def jobs_notify(request):
         return HttpResponseNotFound("This page only supports POST")
 
 
-def jobs_status(request, channel):
+def jobs_status(request, job_id):
     if request.method == 'GET':
-        task = Task.objects.get(task_id=channel)
-        return HttpResponse(task.current_output)
+        task = Task.objects.get(task_id=job_id)
+        return JsonResponse(task.current_output, safe=False)
     else:
         return HttpResponseNotFound("This page only supports GET")
 
@@ -104,13 +93,7 @@ def settings(request):
                 new_password = user_form.cleaned_data['password1']
                 request.user.set_password(new_password)
                 request.user.save()
-
-                username = request.user.username
-                auth.logout(request)
-                user = auth.authenticate(username=username,
-                                         password=new_password)
-                auth.login(request, user)
-
+                update_session_auth_hash(request, request.user)
                 messages.success(request, 'Password successfully changed')
             else:
                 errors = \
